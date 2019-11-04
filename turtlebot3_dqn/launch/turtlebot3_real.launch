@@ -1,0 +1,6 @@
+<launch>
+  <arg name="stage" default="1"/>
+  <param name="stage_number"  value="$(arg stage)"/>
+  <node pkg="turtlebot3_dqn" type="turtlebot3_real" name="turtlebot3_real" output="screen" />
+  <node pkg="turtlebot3_dqn" type="turtlebot3_measure_real" name="turtlebot3_measure_real" output="screen" />
+</launch>
