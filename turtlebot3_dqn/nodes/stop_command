@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import rospy
+
+from geometry_msgs.msg import Twist
+
+
+def transmission():
+    rospy.init_node('turtlebot3_stop')
+    pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
+    vel_cmd = Twist()
+    vel_cmd.linear.x = 0
+    vel_cmd.angular.z = 0
+    while not rospy.is_shutdown():
+        pub_cmd_vel.publish(vel_cmd)
+
+if __name__ == '__main__':
+    try:
+        transmission()
+    except rospy.ROSInterruptException:
+        pass

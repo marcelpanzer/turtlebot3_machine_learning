@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+
+import rospy
+import time
+from gazebo_msgs.msg import ModelState, ModelStates
+
+class Combination():
+    def __init__(self):
+        self.pub_model = rospy.Publisher('gazebo/set_model_state', ModelState, queue_size=1)
+        self.moving()
+
+    def moving(self):
+        state = 0
+        while not rospy.is_shutdown():
+            model = rospy.wait_for_message('gazebo/model_states', ModelStates)
+            for i in range(len(model.name)):
+                if model.name[i] == 'obstacle_2':
+                    obstacle_2 = ModelState()
+                    obstacle_2.model_name = model.name[i]
+                    obstacle_2.pose = model.pose[i]
+                    obstacle_2.twist = model.twist[i]
+
+                    if obstacle_2.pose.position.x > 2.5:
+                        obstacle_2.twist.linear.x = -0.25
+
+                    elif obstacle_2.pose.position.x < 2.5 and obstacle_2.pose.position.x > -0.5 and obstacle_2.twist.linear.x <0:
+                        obstacle_2.twist.linear.x = -0.25
+
+                    elif obstacle_2.pose.position.x < -0.5:
+                        obstacle_2.twist.linear.x = 0.25
+
+                    elif obstacle_2.pose.position.x < 2.5 and obstacle_2.pose.position.x > -0.5 and obstacle_2.twist.linear.x >0:
+                        obstacle_2.twist.linear.x = 0.25
+
+
+                    self.pub_model.publish(obstacle_2)
+                    time.sleep(0.1)
+
+def main():
+    rospy.init_node('simulation_5_obstacle_2')
+    try:
+        combination = Combination()
+    except rospy.ROSInterruptException:
+        pass
+
+if __name__ == '__main__':
+    main()

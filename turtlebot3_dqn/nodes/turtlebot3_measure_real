@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+import rospy
+import numpy as np
+import math
+import time
+import tf
+from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from math import pi
+from geometry_msgs.msg import Twist, Point, Pose
+from gazebo_msgs.msg import ModelStates, ModelState
+from geometry_msgs.msg import Pose
+
+
+
+class Combination():
+    def __init__(self):
+        self.sub_odom = rospy.Subscriber('odom', Odometry, queue_size=5)
+        self.odom_position = Pose()
+        self.first = True
+        self.moving()
+
+    def moving(self):
+        # with open('/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/distance_measurements_straight_1m_odom.csv', 'w+') as saveFile:
+        with open('/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/distance_measurements_odom_square.csv', 'w+') as saveFile:
+            # saveFile.write("Odom_X,Odom_Y,Map_X,Map_Y,Odom_YAW,Map_YAW" + '\n')
+            saveFile.write("Odom_X,Odom_Y,Map_X,Map_Y,Odom_YAW,Map_YAW" + '\n')  # write each result to new line
+            pose_modelstates = Pose()
+            pose_odom = Pose()
+            self.sub_odom = rospy.Subscriber('odom', Odometry, queue_size=5)
+            listener = tf.TransformListener()
+            while not rospy.is_shutdown():
+                odom_1 = rospy.wait_for_message('odom', Odometry)
+                try:
+                    (trans,rot) = listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
+                except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                    continue
+                # print trans
+                turtlebot_pos_odom= Odometry()
+                turtlebot_pos_odom.pose = odom_1.pose
+                _, _, yaw_map = euler_from_quaternion([rot[0], rot[1], rot[2], rot[3]])
+                _, _, yaw_odom = euler_from_quaternion([turtlebot_pos_odom.pose.pose.orientation.x, turtlebot_pos_odom.pose.pose.orientation.y, turtlebot_pos_odom.pose.pose.orientation.z, turtlebot_pos_odom.pose.pose.orientation.w])
+                Odom_X = turtlebot_pos_odom.pose.pose.position.x
+                Odom_Y = turtlebot_pos_odom.pose.pose.position.y
+                Map_X = trans[0]
+                Map_Y = trans[1]
+                saveFile.write(str(Odom_X)+","+str(Odom_Y)+","+str(Map_X)+","+str(Map_Y)+"," +str(yaw_odom)+","+str(yaw_map) + '\n')  # write each result to new line
+                saveFile.flush()
+                # rospy.loginfo('File written')
+                # waiting 1 second
+                time.sleep(0.1)
+
+def main():
+        rospy.init_node("moving")
+        try:
+            combination = Combination()
+        except rospy.ROSInterruptException:
+            pass
+
+if __name__ == '__main__':
+        main()

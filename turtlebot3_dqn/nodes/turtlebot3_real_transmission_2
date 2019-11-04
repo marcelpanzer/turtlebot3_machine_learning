@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import rospy
+import numpy as np
+import time
+import sys
+from geometry_msgs.msg import Twist
+
+def callback(data):
+    print "received cmd_vel_1 topic"
+
+def transmission():
+    rospy.init_node('turtlebot3_signal_transmission')
+    pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
+    vel_cmd = Twist()
+    time_1 = 0
+    time_2 = 0
+    time_3 = 0
+    while not rospy.is_shutdown():
+        # action = rospy.wait_for_message('cmd_vel_1', Twist, callback)
+        action = rospy.wait_for_message('cmd_vel_1', Twist)
+        vel_cmd.linear.x = action.linear.x; vel_cmd.angular.z = action.angular.z
+        time_3 = time.time()
+        time_diff = time_3 - time_1
+        print time_diff
+        time_1 = time.time()
+        time_2 = time.time()
+        # slightly smaller time period than the LIDAR rotation time
+        while time_1 - time_2 < 0.1:
+            # action = rospy.Subscriber('cmd_vel_1', Twist, callback)
+            # action = rospy.Subscriber('cmd_vel_1', Twist, queue_size=10)
+            pub_cmd_vel.publish(vel_cmd)
+            time_1 = time.time()
+        continue
+
+if __name__ == '__main__':
+    try:
+        transmission()
+    except rospy.ROSInterruptException:
+        pass

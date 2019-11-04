@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+import rospy
+import numpy as np
+import math
+import time
+from math import pi
+from sensor_msgs.msg import LaserScan
+
+
+class Combination():
+    def __init__(self):
+        self.moving()
+
+    def moving(self):
+        k=0
+        data_0=rospy.wait_for_message('scan', LaserScan, timeout=5)
+        a, b = 360, 300
+        while k < len(data_0.ranges):
+            data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+            scan_range_1 =  [[0 for x in range(a)] for y in range(b)]
+            # scan_range_1 = []
+            # scan_range_2 = []
+            # scan_range_3 = []
+            j=0
+            while j < 300:
+                data = rospy.wait_for_message('scan', LaserScan)
+                scan_range_1[k][j]=data.ranges[k]
+                # if i==4:
+                #     z=0
+                #     scan_range_1[z]=data.ranges[i]
+                #     print(data.ranges[i])
+                #     # print(len(scan_range_1))
+                #     # print(z)
+                # elif i==100:
+                #     scan_range_2.append(data.ranges[i])
+                #     print(data.ranges[i])
+                #     # print(100)
+                # elif i==200:
+                #     scan_range_3.append(data.ranges[i])
+                #     print(data.ranges[i])
+                #     # print(200)
+                j +=1
+            k += 1
+        print(scan_range_1)
+
+
+
+def main():
+    rospy.init_node("scan")
+    try:
+        combination = Combination()
+    except rospy.ROSInterruptException:
+        pass
+
+if __name__ == '__main__':
+    main()
