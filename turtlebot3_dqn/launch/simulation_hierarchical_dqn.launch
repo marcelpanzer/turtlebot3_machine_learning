@@ -1,0 +1,7 @@
+<launch>
+  <arg name="stage" default="3"/>
+  <param name="stage_number"  value="$(arg stage)"/>
+
+  <node pkg="turtlebot3_dqn"  type="simulation_hierarchical_dqn" name="simulation_hierarchical_dqn" output="screen" />
+  <node pkg="turtlebot3_dqn"  type="simulation_3_obstacle" name="simulation_3_obstacle" output="screen" />
+</launch>
