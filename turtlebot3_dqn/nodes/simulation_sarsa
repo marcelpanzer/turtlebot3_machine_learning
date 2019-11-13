@@ -164,8 +164,8 @@ if __name__ == '__main__':
             score = 0
             for t in range(agent.episode_step):
                 next_state, reward, done, crashes, goals = env.step(action)
-                next_action = agent.getAction(next_state)
                 agent.appendMemory(state, action, reward, next_state, next_action, done)
+                next_action = agent.getAction(next_state)
 
                 if len(agent.memory) >= agent.train_start:
                     if global_step <= agent.target_update:
