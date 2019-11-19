@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+import rospy
+import numpy as np
+import math
+import time
+from math import pi
+from sensor_msgs.msg import LaserScan
+
+
+class Combination():
+    def __init__(self):
+        self.moving()
+
+    def moving(self):
+        k=0
+        with open('/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/sensor_data_filtered.csv', 'w+') as saveFile:
+            # saveFile.write("Odom_X,Odom_Y,Map_X,Map_Y,Odom_YAW,Map_YAW" + '\n')
+            saveFile.write("Messwerte" + '\n')  # wr
+            i = 0
+            while not rospy.is_shutdown():
+
+                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+                scan_range = []
+
+                for i in range(len(data.ranges)):
+                    if data.ranges[i] == float('Inf'):
+                        scan_range.append(3.5)
+                    # zero Problem
+                    # elif np.isnan(scan.ranges[i]):
+                    #     scan_range.append(0)
+                    elif data.ranges[i] == 0:
+                        k = 1
+                        t = 0
+                        if i == 0:
+                            while data.ranges[k]==0:
+                                k += 1
+                            while t < k:
+                                scan_range.append(data.ranges[k])
+                                t += 1
+                            i = k
+                        else:
+                            k = i
+                            m = i
+                            a = data.ranges[i-1]
+                            while data.ranges[k]==0:
+                                k += 1
+                                b = data.ranges[k]
+                                if k == 359:
+                                    while m <= k:
+                                        scan_range.append(a)
+                                        m += 1
+                                        break
+                            while m < k:
+                                scan_range.append(min(a, b))
+                                m += 1
+                            i = k
+                    else:
+                        scan_range.append(data.ranges[i])
+
+                saveFile.write(str(scan_range) + '\n')  # write each result to new line
+                saveFile.flush()
+                time.sleep(20)
+
+def main():
+    rospy.init_node("scan_filter")
+    try:
+        combination = Combination()
+    except rospy.ROSInterruptException:
+        pass
+
+if __name__ == '__main__':
+    main()
