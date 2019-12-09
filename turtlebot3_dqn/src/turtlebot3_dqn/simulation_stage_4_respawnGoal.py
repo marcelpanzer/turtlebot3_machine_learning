@@ -22,7 +22,7 @@ import random
 import time
 import os
 from gazebo_msgs.srv import SpawnModel, DeleteModel
-from gazebo_msgs.msg import ModelStates, ModelState
+from gazebo_msgs.msg import ModelStates
 from geometry_msgs.msg import Pose
 
 class Respawn():
@@ -34,10 +34,13 @@ class Respawn():
         self.model = self.f.read()
         self.stage = rospy.get_param('/stage_number')
         self.goal_position = Pose()
-        # self.init_goal_x = random.randrange(-26, 26) / 10.0
-        # self.init_goal_y = random.randrange(-26, 26) / 10.0
-        self.init_goal_x = 0.3
-        self.init_goal_y = 0.6
+        goal_x_list_init = [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5, -2.5, -1.5, -1, -0,5, 0, 0.5, 1.5, 2, 2.5,-2.5, -2, -1.5, -0.5, 0, 0.5, 1.5, 2 ,2.5, -2.5, -2, -0.5, 0, 0.5, 1.5, 2, 2.5, -2.5, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5,  -2.5, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5]
+        goal_y_list_init = [-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5]
+        self.index_init = random.randrange(0, len(goal_x_list_init)-1)
+        self.init_goal_x = goal_x_list_init[self.index_init]
+        self.init_goal_y = goal_x_list_init[self.index_init]
+        self.goal_position.position.x = self.init_goal_x
+        self.goal_position.position.y = self.init_goal_y
         self.goal_position.position.x = self.init_goal_x
         self.goal_position.position.y = self.init_goal_y
         self.modelName = 'goal'
@@ -51,9 +54,6 @@ class Respawn():
         self.sub_model = rospy.Subscriber('gazebo/model_states', ModelStates, self.checkModel)
         self.check_model = False
         self.index = 0
-        self.turtlebot = rospy.Publisher('gazebo/set_model_state', ModelState, queue_size=1)
-        self.goal_number = 0
-        self.factor = 0
 
     def checkModel(self, model):
         self.check_model = False
@@ -84,26 +84,25 @@ class Respawn():
                 pass
 
     def getPosition(self, position_check=False, delete=False):
-        position_check = True
-
-        if self.goal_number >= 200:
-            self.factor = 2.6
-        else:
-             self.factor = (float(self.goal_number)/float(200))*1.6 + 1
+        if delete:
+            self.deleteModel()
 
         while position_check:
-            goal_x = float(random.randrange(-10, 10)) / float(10.0) * self.factor
-            goal_y = float(random.randrange(-10, 10)) / float(10.0) * self.factor
+            goal_x_list = [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5, -2.5, -1.5, -1, -0,5, 0, 0.5, 1.5, 2, 2.5,-2.5, -2, -1.5, -0.5, 0, 0.5, 1.5, 2 ,2.5, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1.5, 2, 2.5, -2.5, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5,  -2.5, -1.5, -1, -0.5, 0, 0.5, 1.0, 1.5, 2, 2.5]
+            goal_y_list = [-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,-0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5]
 
-            if abs(goal_x) < 0.3 and abs(goal_y) < 0.3 and  abs(goal_x - self.last_goal_x) <= 0.5 and abs(goal_y - self.last_goal_y) <= 0.5:
+            self.index = random.randrange(0, len(goal_x_list)-1)
+            print(self.index, self.last_index)
+            if self.last_index == self.index:
                 position_check = True
             else:
+                self.last_index = self.index
                 position_check = False
 
-        self.goal_number += 1
-        self.goal_position.position.x = goal_x
-        self.goal_position.position.y = goal_y
+            self.goal_position.position.x = goal_x_list[self.index]
+            self.goal_position.position.y = goal_y_list[self.index]
 
+        time.sleep(0.5)
         self.respawnModel()
 
         self.last_goal_x = self.goal_position.position.x

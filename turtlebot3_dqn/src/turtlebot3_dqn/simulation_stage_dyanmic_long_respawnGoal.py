@@ -37,7 +37,7 @@ class Respawn():
         # self.init_goal_x = random.randrange(-26, 26) / 10.0
         # self.init_goal_y = random.randrange(-26, 26) / 10.0
         self.init_goal_x = 0.3
-        self.init_goal_y = 0.6
+        self.init_goal_y = 0
         self.goal_position.position.x = self.init_goal_x
         self.goal_position.position.y = self.init_goal_y
         self.modelName = 'goal'
@@ -86,21 +86,17 @@ class Respawn():
     def getPosition(self, position_check=False, delete=False):
         position_check = True
 
-        if self.goal_number >= 200:
-            self.factor = 2.6
+        if self.goal_number >= 800:
+            self.factor = 8
         else:
-             self.factor = (float(self.goal_number)/float(200))*1.6 + 1
-
-        while position_check:
-            goal_x = float(random.randrange(-10, 10)) / float(10.0) * self.factor
-            goal_y = float(random.randrange(-10, 10)) / float(10.0) * self.factor
-
-            if abs(goal_x) < 0.3 and abs(goal_y) < 0.3 and  abs(goal_x - self.last_goal_x) <= 0.5 and abs(goal_y - self.last_goal_y) <= 0.5:
-                position_check = True
-            else:
-                position_check = False
+             self.factor = (float(self.goal_number)/float(800))*8
 
         self.goal_number += 1
+
+        goal_x = self.factor + 2
+        goal_y = 0
+
+
         self.goal_position.position.x = goal_x
         self.goal_position.position.y = goal_y
 

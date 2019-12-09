@@ -27,17 +27,13 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Empty
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-# from simulation_stage_1_respawnGoal import Respawn
-# from respawnGoal import Respawn
-# from simulation_stage_3_respawnGoal import Respawn
-from simulation_stage_2_respawnGoal import Respawn
-# from simulation_stage_oneway_respawnGoal_changing import Respawn
+from simulation_stage_dyanmic_respawnGoal import Respawn
 from gazebo_msgs.msg import ModelStates, ModelState
 from geometry_msgs.msg import Pose
 
 class Env():
     def __init__(self, action_size):
-        self.goal_x = 0
+        self.goal_x = 2
         self.goal_y = 0
         self.heading = 0
         self.action_size = action_size
@@ -108,7 +104,7 @@ class Env():
             done = True
 
         current_distance = round(math.hypot(self.goal_x - self.position.x, self.goal_y - self.position.y),2)
-        if current_distance < 0.3:
+        if current_distance < 0.2:
             self.get_goalbox = True
 
         return scan_range + [heading, current_distance, obstacle_min_range, obstacle_angle], done
@@ -165,7 +161,7 @@ class Env():
         else:
             ob_reward = 0
 
-        reward = ((round(yaw_reward[action] * 5, 2)) * distance_rate) + ob_reward - 3
+        reward = ((round(yaw_reward[action] * 5, 2)) * distance_rate) + ob_reward - 5
 
 
         if done:
@@ -183,23 +179,39 @@ class Env():
             self.goal_distance = self.getGoalDistace()
             self.get_goalbox = False
             self.goals+=1
+
+            rospy.wait_for_service('gazebo/reset_simulation')
+            try:
+                self.reset_proxy()
+            except (rospy.ServiceException) as e:
+                print("gazebo/reset_simulation service call failed")
+
+            data = None
+            while data is None:
+                try:
+                    data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+                except:
+                    pass
+
+            if self.initGoal:
+                self.goal_x, self.goal_y = self.respawn_goal.getPosition()
+                self.initGoal = False
+
+            self.goal_distance = self.getGoalDistace()
+            state, done = self.getState(data)
+
+
+
             print "Reached goals:", self.goals, "Crashes:", self.crashes, "Total tries:", self.crashes
 
         return reward, self.crashes, self.goals
 
 
-    def speed(self):
-        speed = 0.15
-        if self.goal_distance < 0.5:
-            speed = 0.15 + 0.1 * ((self.goal_distance-0.5)/0.5)
-        return speed
-
     def step(self, action):
         max_angular_vel = 1.5
         ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
         vel_cmd = Twist()
-        # vel_cmd.linear.x = 0.15
-        vel_cmd.linear.x = self.speed()
+        vel_cmd.linear.x = 0.15
         vel_cmd.angular.z = ang_vel
         self.pub_cmd_vel.publish(vel_cmd)
 
@@ -213,7 +225,6 @@ class Env():
         state, done = self.getState(data)
         reward, crashes, goals = self.setReward(state, done, action)
 
-
         return np.asarray(state), reward, done, crashes, goals
 
     def reset(self):
@@ -223,32 +234,6 @@ class Env():
         except (rospy.ServiceException) as e:
             print("gazebo/reset_simulation service call failed")
 
-        # driving backwards when crashing but has some bugs
-        # obstacle = ModelState()
-        # crash_distance = 0.35
-        # model = rospy.wait_for_message('gazebo/model_states', ModelStates)
-        # for i in range(len(model.name)):
-        #     if model.name[i] == 'turtlebot3_burger':
-        #         obstacle.pose = model.pose[i]
-        # a = obstacle.pose.position.x
-        # b = obstacle.pose.position.y
-        # crash_position = True
-        # while crash_position:
-        #     vel_cmd = Twist()
-        #     vel_cmd.linear.x = -0.2
-        #     self.pub_cmd_vel.publish(vel_cmd)
-        #     model = rospy.wait_for_message('gazebo/model_states', ModelStates)
-        #     for i in range(len(model.name)):
-        #         if model.name[i] == 'turtlebot3_burger':
-        #             obstacle.pose = model.pose[i]
-        #             c = obstacle.pose.position.x
-        #             d = obstacle.pose.position.y
-        #     if math.fabs(math.sqrt((a-c)**2+(b-d)**2)) > crash_distance:
-        #         vel_cmd.linear.x = 0
-        #         self.pub_cmd_vel.publish(vel_cmd)
-        #         crash_position = False
-
-        crash_position = True
 
         data = None
         while data is None:

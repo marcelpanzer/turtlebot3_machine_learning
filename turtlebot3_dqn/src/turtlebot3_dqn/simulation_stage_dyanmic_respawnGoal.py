@@ -21,9 +21,11 @@ import rospy
 import random
 import time
 import os
+from std_srvs.srv import Empty
 from gazebo_msgs.srv import SpawnModel, DeleteModel
 from gazebo_msgs.msg import ModelStates, ModelState
 from geometry_msgs.msg import Pose
+
 
 class Respawn():
     def __init__(self):
@@ -32,12 +34,12 @@ class Respawn():
                                                 'turtlebot3_simulations/turtlebot3_gazebo/models/turtlebot3_square/goal_box/model.sdf')
         self.f = open(self.modelPath, 'r')
         self.model = self.f.read()
-        self.stage = rospy.get_param('/stage_number')
+        # self.stage = rospy.get_param('/stage_number')
         self.goal_position = Pose()
         # self.init_goal_x = random.randrange(-26, 26) / 10.0
         # self.init_goal_y = random.randrange(-26, 26) / 10.0
         self.init_goal_x = 0.3
-        self.init_goal_y = 0.6
+        self.init_goal_y = 0
         self.goal_position.position.x = self.init_goal_x
         self.goal_position.position.y = self.init_goal_y
         self.modelName = 'goal'
@@ -49,6 +51,7 @@ class Respawn():
         self.last_goal_y = self.init_goal_y
         self.last_index = 0
         self.sub_model = rospy.Subscriber('gazebo/model_states', ModelStates, self.checkModel)
+        self.reset_proxy = rospy.ServiceProxy('gazebo/reset_simulation', Empty)
         self.check_model = False
         self.index = 0
         self.turtlebot = rospy.Publisher('gazebo/set_model_state', ModelState, queue_size=1)
@@ -86,25 +89,27 @@ class Respawn():
     def getPosition(self, position_check=False, delete=False):
         position_check = True
 
-        if self.goal_number >= 200:
-            self.factor = 2.6
+        if self.goal_number >= 700:
+            self.factor = 2.5
         else:
-             self.factor = (float(self.goal_number)/float(200))*1.6 + 1
-
-        while position_check:
-            goal_x = float(random.randrange(-10, 10)) / float(10.0) * self.factor
-            goal_y = float(random.randrange(-10, 10)) / float(10.0) * self.factor
-
-            if abs(goal_x) < 0.3 and abs(goal_y) < 0.3 and  abs(goal_x - self.last_goal_x) <= 0.5 and abs(goal_y - self.last_goal_y) <= 0.5:
-                position_check = True
-            else:
-                position_check = False
+             self.factor = (float(self.goal_number)/float(700))*2.5
 
         self.goal_number += 1
+
+        goal_x = self.factor + 2
+        goal_y = 0
+        print goal_x
+
         self.goal_position.position.x = goal_x
         self.goal_position.position.y = goal_y
 
-        self.respawnModel()
+        print self.goal_position.position.x
+
+        rospy.wait_for_service('gazebo/reset_simulation')
+        try:
+            self.reset_proxy()
+        except (rospy.ServiceException) as e:
+            print("gazebo/reset_simulation service call failed")
 
         self.last_goal_x = self.goal_position.position.x
         self.last_goal_y = self.goal_position.position.y

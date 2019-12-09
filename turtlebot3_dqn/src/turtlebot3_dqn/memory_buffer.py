@@ -12,16 +12,19 @@ class MemoryBuffer(object):
     def __init__(self, buffer_size, with_per = False):
         """ Initialization
         """
+        if(with_per):
             # Prioritized Experience Replay
-        self.alpha = 0.5
-        self.epsilon = 0.01
-        self.buffer = SumTree(buffer_size)
-
+            self.alpha = 0.5
+            self.epsilon = 0.01
+            self.buffer = SumTree(buffer_size)
+        else:
+            # Standard Buffer
+            self.buffer = deque()
         self.count = 0
         self.with_per = with_per
         self.buffer_size = buffer_size
 
-    def memorize(self, state, action, reward, done, new_state, error=None):
+    def memorize(self, state, action, reward, done, new_state, error):
         """ Save an experience to memory, optionally with its TD-Error
         """
 
@@ -30,14 +33,6 @@ class MemoryBuffer(object):
             priority = self.priority(error[0])
             self.buffer.add(priority, experience)
             self.count += 1
-        else:
-            # Check if buffer is already full
-            if self.count < self.buffer_size:
-                self.buffer.append(experience)
-                self.count += 1
-            else:
-                self.buffer.popleft()
-                self.buffer.append(experience)
 
     def priority(self, error):
         """ Compute an experience priority, as per Schaul et al.
@@ -74,7 +69,18 @@ class MemoryBuffer(object):
                 d_batch.append(data[3])
                 new_s_batch.append(data[4])
                 idx_.append(idx)
+                # batch.append((data, idx))
 
+            # print batch
+            # idx = np.array([i[5] for i in batch])
+
+        # Return a batch of experience
+        # s_batch = np.array([i[0] for i in batch])
+        # a_batch = np.array([i[1] for i in batch])
+        # r_batch = np.array([i[2] for i in batch])
+        # d_batch = np.array([i[3] for i in batch])
+        # new_s_batch = np.array([i[4] for i in batch])
+        # idx = np.array([i[5] for i in batch])
         return s_batch, a_batch, r_batch, d_batch, new_s_batch, idx_
 
     def update(self, idx, new_error):
