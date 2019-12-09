@@ -14,7 +14,7 @@ class Combination():
 
     def moving(self):
         k=0
-        with open('/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/sensor_data_6.csv', 'w+') as saveFile:
+        with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/sensor_data_6.csv', 'w+') as saveFile:
             # saveFile.write("Odom_X,Odom_Y,Map_X,Map_Y,Odom_YAW,Map_YAW" + '\n')
             saveFile.write("Messwerte" + '\n')  # wr
             while not rospy.is_shutdown():

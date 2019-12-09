@@ -39,11 +39,12 @@ class ReinforceAgent():
     def __init__(self, state_size, action_size):
         self.pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
         self.dirPath = os.path.dirname(os.path.realpath(__file__))
-        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', 'turtlebot3_dqn/save_model/stage_1_'
+        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', 'turtlebot3_dqn/save_model/stage_1_sarsa_world_1_')
+
         self.result = Float32MultiArray()
 
-        self.load_model = True
-        self.load_episode = 2990
+        self.load_model = False
+        self.load_episode = 0
         self.state_size = state_size
         self.action_size = action_size
         self.episode_step = 6000
@@ -86,7 +87,7 @@ class ReinforceAgent():
         if done:
             return reward
         else:
-            return reward + self.discount_factor * next_target[next_action]
+            return reward + self.discount_factor * next_target[0][next_action]
 
     def updateTargetModel(self):
         self.target_model.set_weights(self.model.get_weights())
@@ -124,7 +125,6 @@ class ReinforceAgent():
 
             else:
                 next_target = self.model.predict(next_states.reshape(1, len(next_states)))
-
             next_q_value = self.getQvalue(rewards, next_target, next_actions, dones)
 
             X_batch = np.append(X_batch, np.array([states.copy()]), axis=0)
@@ -155,7 +155,7 @@ if __name__ == '__main__':
     scores, episodes = [], []
     global_step = 0
     start_time = time.time()
-    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/sarsa_pre_setting_epsiolon_min_01.csv', 'w+') as saveFile:
+    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/stage_1_sarsa_world_1_1_bis.csv', 'w+') as saveFile:
         saveFile.write("Q-value,Crashes,Goals,Time" + '\n')
         for e in range(agent.load_episode + 1, EPISODES):
             done = False
@@ -164,8 +164,8 @@ if __name__ == '__main__':
             score = 0
             for t in range(agent.episode_step):
                 next_state, reward, done, crashes, goals = env.step(action)
-                agent.appendMemory(state, action, reward, next_state, next_action, done)
                 next_action = agent.getAction(next_state)
+                agent.appendMemory(state, action, reward, next_state, next_action, done)
 
                 if len(agent.memory) >= agent.train_start:
                     if global_step <= agent.target_update:

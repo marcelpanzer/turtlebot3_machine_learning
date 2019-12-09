@@ -17,6 +17,7 @@
 
 # Authors: Gilbert #
 
+import tensorflow
 import rospy
 import os
 import json
@@ -24,31 +25,41 @@ import numpy as np
 import random
 import time
 import sys
+import tensorflow as tf
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+import keras
+print(tensorflow.__version__)
+print(keras.__version__)
 from collections import deque
 from std_msgs.msg import Float32MultiArray
-from src.turtlebot3_dqn.simulation_hierarchical_environment import Env
-from keras.models import Sequential, load_model
+from src.turtlebot3_dqn.simulation_stage_1_environment import Env
+from src.turtlebot3_dqn.memory_buffer import MemoryBuffer
+# from tensorflow.keras import backend as b
+# from tensorflow.keras.models import Sequential, load_model
+# from tensorflow.keras.optimizers import RMSprop
+# from tensorflow.keras.layers import Dense, Dropout, Activation, Lambda, Input
+from keras import backend as b
+from keras.utils import plot_model
+from keras.models import Sequential, load_model, Model
 from keras.optimizers import RMSprop
-from keras.layers import Dense, Dropout, Activation
+from keras.layers import Dense, Dropout, Activation, Lambda , Input, Add
 
-
-EPISODES = 3000
+EPISODES = 5000
 
 class ReinforceAgent():
-    def __init__(self, state_size, state_size_2, action_size):
+    def __init__(self, state_size, action_size):
         self.pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
         self.dirPath = os.path.dirname(os.path.realpath(__file__))
-        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', 'turtlebot3_dqn/save_model/stage_hierarchical_world_2')
+        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', '/save_model/turtlebot3_duelingdoubledqn_PER_world_1_')
         self.result = Float32MultiArray()
 
         self.load_model = False
         self.load_episode = 0
         self.state_size = state_size
-        self.state_size_2 = state_size_2
         self.action_size = action_size
         self.episode_step = 6000
-        self.target_update = 2000
+        # self.target_update = 2000
+        self.target_update = 1000
         self.discount_factor = 0.9
         self.learning_rate = 0.001
         self.epsilon = 1.0
@@ -57,23 +68,41 @@ class ReinforceAgent():
         self.batch_size = 64
         self.train_start = 64
         self.memory = deque(maxlen=1000000)
-        self.memory_2 = deque(maxlen=1000000)
+
+        self.buffer_size = 100000
+        self.buffer = MemoryBuffer(self.buffer_size, True)
 
         self.model = self.buildModel()
         self.target_model = self.buildModel()
-        self.model_2 = self.buildModel()
-        self.target_model_2 = self.buildModel()
 
         self.updateTargetModel()
 
         if self.load_model:
             self.model.set_weights(load_model(self.dirPath + str(self.load_episode) + ".h5").get_weights())
-
             with open(self.dirPath + str(self.load_episode) + '.json') as outfile:
                 param = json.load(outfile)
                 self.epsilon = param.get('epsilon')
 
     def buildModel(self):
+
+        # input = Input(shape=(self.state_size,))
+        # x = Dense(64, activation='relu')(input)
+        #
+        # state_value_0 = Dense(32, activation='relu', kernel_initializer='lecun_uniform')(x)
+        # state_value_1 = Dense(1, activation='relu', kernel_initializer='lecun_uniform')(state_value_0)
+        #
+        # action_advantage_0 = Dense(32, activation='relu', kernel_initializer='lecun_uniform')(x)
+        # action_advantage_1 = Dense(self.action_size, activation='relu', kernel_initializer='lecun_uniform')(action_advantage_0)
+        #
+        # # adding state and advantage value
+        # advt = Lambda(lambda action_advantage_1: action_advantage_1 - tf.reduce_mean(action_advantage_1, axis=-1, keep_dims=True))(action_advantage_1)
+        # value = Lambda(lambda state_value_1: tf.tile(state_value_1, [1, self.action_size]))(state_value_1)
+        # output = Add()([value, advt])
+        #
+        # model = Model(input=input, output=output)
+        # model.compile(loss='mse', optimizer=RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06))
+        # model.summary()
+
         model = Sequential()
         model.add(Dense(64, input_shape=(self.state_size,), activation='relu', kernel_initializer='lecun_uniform'))
         model.add(Dense(64, activation='relu', kernel_initializer='lecun_uniform'))
@@ -84,7 +113,15 @@ class ReinforceAgent():
 
         return model
 
-    def getQvalue(self, reward, next_target, done):
+
+    def getQvalue(self, reward, next_target, next_q_value_1, done):
+        # if done:
+        #     return reward
+        # else:
+        #     a = np.argmax(next_q_value_1[0])
+        #     # maximum auswahlen
+        #     return reward + self.discount_factor * next_target[0][a]
+
         if done:
             return reward
         else:
@@ -92,7 +129,6 @@ class ReinforceAgent():
 
     def updateTargetModel(self):
         self.target_model.set_weights(self.model.get_weights())
-        self.target_model_2.set_weights(self.model_2.get_weights())
 
     def getAction(self, state):
         if np.random.rand() <= self.epsilon:
@@ -103,43 +139,42 @@ class ReinforceAgent():
             self.q_value = q_value
             return np.argmax(q_value[0])
 
-    def getAction_2(self, state):
-        if np.random.rand() <= self.epsilon:
-            self.q_value = np.zeros(self.action_size)
-            return random.randrange(self.action_size)
-        else:
-            q_value = self.model_2.predict(state.reshape(1, len(state)))
-            self.q_value = q_value
-            return np.argmax(q_value[0])
-
     def appendMemory(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-
-    def appendMemory_2(self, state, action, reward, next_state, done):
-        self.memory_2.append((state, action, reward, next_state, done))
+        q_val = self.model.predict(state.reshape(1, len(state)))
+        next_target = self.target_model.predict(next_state.reshape(1, len(next_state)))
+        next_best_action = np.argmax(q_val)
+        new_val = reward + self.discount_factor * next_target[0, next_best_action]
+        td_error = abs(new_val - q_val)[0]
+        self.buffer.memorize(state, action, reward, done, next_state, td_error)
 
     def trainModel(self, target=False):
-        mini_batch = random.sample(self.memory, self.batch_size)
+        states_batch, actions_batch, rewards_batch, dones_batch, next_states_batch, idx_batch = self.buffer.sample_batch(self.batch_size)
         X_batch = np.empty((0, self.state_size), dtype=np.float64)
         Y_batch = np.empty((0, self.action_size), dtype=np.float64)
 
         for i in range(self.batch_size):
-            states = mini_batch[i][0]
-            actions = mini_batch[i][1]
-            rewards = mini_batch[i][2]
-            next_states = mini_batch[i][3]
-            dones = mini_batch[i][4]
+            states = states_batch[i]
+            actions = actions_batch[i]
+            rewards = rewards_batch[i]
+            next_states = next_states_batch[i]
+            dones = dones_batch[i]
+            idx = idx_batch[i]
 
             q_value = self.model.predict(states.reshape(1, len(states)))
             self.q_value = q_value
 
             if target:
+                next_q_value_1 = self.model.predict(next_states.reshape(1, len(next_states)))
                 next_target = self.target_model.predict(next_states.reshape(1, len(next_states)))
-
             else:
+                next_q_value_1 = self.model.predict(next_states.reshape(1, len(next_states)))
                 next_target = self.model.predict(next_states.reshape(1, len(next_states)))
 
-            next_q_value = self.getQvalue(rewards, next_target, dones)
+            next_q_value = self.getQvalue(rewards, next_target, next_q_value_1, dones)
+
+            # update sum_tree
+            old_q = q_value[0][actions]
+            self.buffer.update(idx, abs(old_q- next_q_value))
 
             X_batch = np.append(X_batch, np.array([states.copy()]), axis=0)
             Y_sample = q_value.copy()
@@ -153,40 +188,6 @@ class ReinforceAgent():
 
         self.model.fit(X_batch, Y_batch, batch_size=self.batch_size, epochs=1, verbose=0)
 
-    def trainModel_2(self, target=False):
-        mini_batch = random.sample(self.memory_2, self.batch_size)
-        X_batch = np.empty((0, self.state_size), dtype=np.float64)
-        Y_batch = np.empty((0, self.action_size), dtype=np.float64)
-
-        for i in range(self.batch_size):
-            states = mini_batch[i][0]
-            actions = mini_batch[i][1]
-            rewards = mini_batch[i][2]
-            next_states = mini_batch[i][3]
-            dones = mini_batch[i][4]
-
-            q_value = self.model_2.predict(states.reshape(1, len(states)))
-            self.q_value = q_value
-
-            if target:
-                next_target = self.target_model_2.predict(next_states.reshape(1, len(next_states)))
-
-            else:
-                next_target = self.model_2.predict(next_states.reshape(1, len(next_states)))
-
-            next_q_value = self.getQvalue(rewards, next_target, dones)
-
-            X_batch = np.append(X_batch, np.array([states.copy()]), axis=0)
-            Y_sample = q_value.copy()
-
-            Y_sample[0][actions] = next_q_value
-            Y_batch = np.append(Y_batch, np.array([Y_sample[0]]), axis=0)
-
-            if dones:
-                X_batch = np.append(X_batch, np.array([next_states.copy()]), axis=0)
-                Y_batch = np.append(Y_batch, np.array([[rewards] * self.action_size]), axis=0)
-
-        self.model_2.fit(X_batch, Y_batch, batch_size=self.batch_size, epochs=1, verbose=0)
 
 if __name__ == '__main__':
     rospy.init_node('turtlebot3_dqn_stage_3')
@@ -195,52 +196,43 @@ if __name__ == '__main__':
     result = Float32MultiArray()
     get_action = Float32MultiArray()
 
-    state_size = 362
-    state_size_2 = 362
-    action_size = 11
+    state_size = 364
+    action_size = 5
 
     env = Env(action_size)
 
-    agent = ReinforceAgent(state_size, state_size_2, action_size)
-    scores, scores_2, episodes = [], [], []
+    agent = ReinforceAgent(state_size, action_size)
+    scores, episodes = [], []
     global_step = 0
     start_time = time.time()
 
-    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/dqn_hierarchical_world_initial_2_1_bis_.csv', 'w+') as saveFile:
+    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/simulation_DQN_PER_WORLD_1_2_1_bis.csv', 'w+') as saveFile:
 
-        saveFile.write("Q-value_ Q_value_2,Crashes,Goals,Time" + '\n')
-
+        saveFile.write("Q-value,Crashes,Goals,Time" + '\n')
         for e in range(agent.load_episode + 1, EPISODES):
             done = False
-            state, state_2 = env.reset()
+            state = env.reset()
             score = 0
-            score_2 = 0
             for t in range(agent.episode_step):
                 action = agent.getAction(state)
-                next_state, reward, goals = env.step(action)
-                agent.appendMemory(state, action, reward, next_state, done)
-                #das erste Modell ist durchgelaufen
 
-                action_2 = agent.getAction_2(state_2)
-                next_state_2, reward_2, done, crashes = env.step_2(action_2, action)
-                agent.appendMemory_2(state_2, action_2, reward_2, next_state_2, done)
+                next_state, reward, done, crashes, goals = env.step(action)
+                # print time.time()
+
+                agent.appendMemory(state, action, reward, next_state, done)
 
                 if len(agent.memory) >= agent.train_start:
                     if global_step <= agent.target_update:
                         agent.trainModel()
-                        agent.trainModel_2()
                     else:
                         agent.trainModel(True)
-                        agent.trainModel_2(True)
 
                 score += reward
-                score_2 += reward_2
                 state = next_state
-                state_2 = next_state_2
-                # get_action.data = [action, score, reward]
-                # pub_get_action.publish(get_action)
+                get_action.data = [action, score, reward]
+                pub_get_action.publish(get_action)
 
-                # if e % 10 == 0:
+                # if e % 100 == 0:
                 #     agent.model.save(agent.dirPath + str(e) + '.h5')
                 #     with open(agent.dirPath + str(e) + '.json', 'w') as outfile:
                 #         json.dump(param_dictionary, outfile)
@@ -250,20 +242,18 @@ if __name__ == '__main__':
                     done = True
 
                 if done:
+                    m, s = divmod(int(time.time() - start_time), 60)
+                    h, m = divmod(m, 60)
+                    saveFile.write(str(score)+","+str(crashes)+","+str(goals)+","+str(h)+"."+str(m)+"."+str(s) + '\n')  # write each result to new line
+                    saveFile.flush()
+                    rospy.loginfo('File written')
                     result.data = [score, np.max(agent.q_value)]
                     pub_result.publish(result)
                     agent.updateTargetModel()
                     scores.append(score)
-                    scores_2.append(score_2)
                     episodes.append(e)
-                    m, s = divmod(int(time.time() - start_time), 60)
-                    h, m = divmod(m, 60)
-
-                    saveFile.write(str(score)+","+str(score_2)+","+str(crashes)+","+str(goals)+","+str(h)+"."+str(m)+"."+str(s) + '\n')  # write each result to new line
-                    saveFile.flush()
-
-                    rospy.loginfo('Ep: %d score: %.2f score_2: %.2f memory: %d epsilon: %.2f time: %d:%02d:%02d',
-                                  e, score, score_2, len(agent.memory), agent.epsilon, h, m, s)
+                    rospy.loginfo('Ep: %d score: %.2f memory: %d epsilon: %.2f time: %d:%02d:%02d',
+                                  e, score, len(agent.memory), agent.epsilon, h, m, s)
                     param_keys = ['epsilon']
                     param_values = [agent.epsilon]
                     param_dictionary = dict(zip(param_keys, param_values))
@@ -275,3 +265,4 @@ if __name__ == '__main__':
 
             if agent.epsilon > agent.epsilon_min:
                 agent.epsilon *= agent.epsilon_decay
+                print "epsilon:", agent.epsilon

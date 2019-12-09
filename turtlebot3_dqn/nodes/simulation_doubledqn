@@ -29,7 +29,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from collections import deque
 from std_msgs.msg import Float32MultiArray
-from src.turtlebot3_dqn.simulation_stage_1_environment import Env
+# from src.turtlebot3_dqn.simulation_stage_1_environment import Env
+from src.turtlebot3_dqn.simulation_stage_dynamic_environment import Env
 from keras.models import Sequential, load_model
 from keras.optimizers import RMSprop
 from keras.layers import Dense, Dropout, Activation
@@ -41,7 +42,7 @@ class ReinforceAgent():
     def __init__(self, state_size, action_size):
         self.pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
         self.dirPath = os.path.dirname(os.path.realpath(__file__))
-        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', 'turtlebot3_dqn/save_model/doubledqn_1_')
+        self.dirPath = self.dirPath.replace('turtlebot3_dqn/nodes', 'turtlebot3_dqn/save_model/doubledqn_stage_dynamic__')
         self.result = Float32MultiArray()
 
         self.load_model = False
@@ -58,7 +59,6 @@ class ReinforceAgent():
         self.batch_size = 64
         self.train_start = 64
         self.memory = deque(maxlen=1000000)
-
         self.model = self.buildModel()
         self.target_model = self.buildModel()
 
@@ -157,26 +157,29 @@ if __name__ == '__main__':
 
     env = Env(action_size)
 
+
     agent = ReinforceAgent(state_size, action_size)
     scores, episodes = [], []
     scores_avg=[]
     avg_score=[]
     global_step = 0
+    global_step_1 = 0
     step_q = 0
     count = 0
     count_2 = 1
     sum = 0
     start_time = time.time()
-    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/doubledqn_stage_1_1.txt', 'w+') as saveFile:
+    with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/doubledqn_update_2_stage_dynamic_1_bis_.txt', 'w+') as saveFile:
         saveFile.write("Q-value,Crashes,Goals,Time" + '\n')
         for e in range(agent.load_episode + 1, EPISODES):
             done = False
             state = env.reset()
             score = 0
+
             for t in range(agent.episode_step):
                 action = agent.getAction(state)
 
-                next_state, reward, done, crashes, goals, time = env.step(action)
+                next_state, reward, done, crashes, goals = env.step(action)
                 # print time.time()
 
                 agent.appendMemory(state, action, reward, next_state, done)
@@ -197,14 +200,21 @@ if __name__ == '__main__':
                     with open(agent.dirPath + str(e) + '.json', 'w') as outfile:
                         json.dump(param_dictionary, outfile)
 
-                # if global_step % 20 == 0:
+                # if global_step % 5 == 0:
                 #     agent.updateTargetModel()
+                #     print global_step
+                #     print "update"
 
                 if t >= 500:
                     rospy.loginfo("Time out!!")
                     done = True
 
+                if e % 2 == 0:
+                    agent.updateTargetModel()
+                    print global_step, "update"
+
                 if done:
+
                     m, s = divmod(int(time.time() - start_time), 60)
                     h, m = divmod(m, 60)
                     saveFile.write(str(score)+","+str(crashes)+","+str(goals)+","+str(h)+"."+str(m)+"."+str(s) + '\n')  # write each result to new line
@@ -212,7 +222,7 @@ if __name__ == '__main__':
                     rospy.loginfo('File written')
                     result.data = [score, np.max(agent.q_value)]
                     pub_result.publish(result)
-                    agent.updateTargetModel()
+                    # agent.updateTargetModel()
                     scores.append(score)
                     episodes.append(e)
                     rospy.loginfo('Ep: %d score: %.2f memory: %d epsilon: %.2f time: %d:%02d:%02d',

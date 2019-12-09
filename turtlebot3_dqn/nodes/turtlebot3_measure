@@ -24,7 +24,7 @@ class Combination():
         self.moving()
 
     def moving(self):
-        with open('/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/distance_measurements_1.csv', 'w+') as saveFile:
+        with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/distance_measurements_encoder_2.csv', 'w+') as saveFile:
             saveFile.write("Modelstates_X,Modelstates_Y,Odom_X,Odom_Y,Map_X,Map_Y" + '\n')  # write each result to new line
             pose_modelstates = Pose()
             pose_odom = Pose()
@@ -34,10 +34,9 @@ class Combination():
                 model = rospy.wait_for_message('gazebo/model_states', ModelStates)
                 odom_1 = rospy.wait_for_message('odom', Odometry)
                 try:
-                    (trans,rot) = listener.lookupTransform('/map', '/odom', rospy.Time(0))
+                    (trans,rot) = listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
                 except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                     continue
-                print trans
                 for i in range(len(model.name)):
                     if model.name[i] == 'turtlebot3_burger':
                         turtlebot_pos= ModelState()
@@ -50,8 +49,10 @@ class Combination():
                         Modelstates_Y = turtlebot_pos.pose.position.y
                         Odom_X = turtlebot_pos_odom.pose.pose.position.x
                         Odom_Y = turtlebot_pos_odom.pose.pose.position.y
-                        Map_X = turtlebot_pos_odom.pose.pose.position.x + trans[0]
-                        Map_Y = turtlebot_pos_odom.pose.pose.position.y + trans[1]
+                        Map_X = trans[0]
+                        Map_Y = trans[1]
+                        # Map_X = turtlebot_pos_odom.pose.pose.position.x + trans[0]
+                        # Map_Y = turtlebot_pos_odom.pose.pose.position.y + trans[1]
                         # print "Modelstates_x:",turtlebot_pos.pose.position.x, "Modelstates_y:",turtlebot_pos.pose.position.y
                         # print "Odom_x",turtlebot_pos_odom.pose.pose.position.x, "Odom_y:",turtlebot_pos_odom.pose.pose.position.y
                         # print "Map_x",turtlebot_pos_odom.pose.pose.position.x - trans[0], "Map_y:",turtlebot_pos_odom.pose.pose.position.y-trans[1]
@@ -59,7 +60,7 @@ class Combination():
                         saveFile.flush()
                         rospy.loginfo('File written')
                         # waiting 1 second
-                        time.sleep(1)
+                        time.sleep(0.1)
 
 def main():
         rospy.init_node("moving")
