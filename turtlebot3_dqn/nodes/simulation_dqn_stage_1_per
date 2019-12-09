@@ -110,7 +110,8 @@ class ReinforceAgent():
             q_value = self.model.predict(state.reshape(1, len(state)))
             self.q_value = q_value
             return np.argmax(q_value[0])
-
+    
+    # https://github.com/germain-hug/Deep-RL-Keras/tree/master/utils
     def appendMemory(self, state, action, reward, next_state, done):
         q_val = self.model.predict(state.reshape(1, len(state)))
         next_target = self.target_model.predict(next_state.reshape(1, len(next_state)))
