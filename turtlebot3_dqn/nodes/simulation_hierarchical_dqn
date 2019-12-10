@@ -27,6 +27,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from collections import deque
 from std_msgs.msg import Float32MultiArray
+
+# modified environment - considers both networks and interconnection
 from src.turtlebot3_dqn.simulation_hierarchical_environment import Env
 from keras.models import Sequential, load_model
 from keras.optimizers import RMSprop
@@ -61,6 +63,7 @@ class ReinforceAgent():
 
         self.model = self.buildModel()
         self.target_model = self.buildModel()
+        # second network
         self.model_2 = self.buildModel()
         self.target_model_2 = self.buildModel()
 
@@ -91,6 +94,7 @@ class ReinforceAgent():
             return reward + self.discount_factor * np.amax(next_target)
 
     def updateTargetModel(self):
+        # twice
         self.target_model.set_weights(self.model.get_weights())
         self.target_model_2.set_weights(self.model_2.get_weights())
 
@@ -111,7 +115,8 @@ class ReinforceAgent():
             q_value = self.model_2.predict(state.reshape(1, len(state)))
             self.q_value = q_value
             return np.argmax(q_value[0])
-
+        
+    # both memories
     def appendMemory(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
