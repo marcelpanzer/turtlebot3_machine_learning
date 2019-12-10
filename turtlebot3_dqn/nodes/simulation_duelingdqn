@@ -79,7 +79,8 @@ class ReinforceAgent():
                 self.epsilon = param.get('epsilon')
 
     def buildModel(self):
-
+    
+        #dueling structure
         input = Input(shape=(self.state_size,))
         x = Dense(64, activation='relu')(input)
 
@@ -101,7 +102,6 @@ class ReinforceAgent():
 
         return model
 
-        # model.compile(loss='mse', optimizer=RMSprop(self.learning_rate))
         # plot_model(model, to_file= '/home/marcel/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/duelingDQN.png')
 
 
@@ -140,7 +140,8 @@ class ReinforceAgent():
 
             q_value = self.model.predict(states.reshape(1, len(states)))
             self.q_value = q_value
-
+            
+            # no doubledqn
             if target:
                 next_target = self.target_model.predict(next_states.reshape(1, len(next_states)))
 
