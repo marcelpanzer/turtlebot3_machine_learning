@@ -313,6 +313,7 @@ class Env():
         return np.asarray(state), reward, done
 
     def reset(self):
+        # corrdinate receive, transformation
         yaw_neu = 0
         if self.initGoal:
             self.start_x_map, self.start_y_map, start_orientation_2 = self.respawn_goal.getstartPosition()
