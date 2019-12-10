@@ -28,7 +28,7 @@ from nav_msgs.msg import Odometry
 from std_srvs.srv import Empty
 from std_msgs.msg import String
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-from simulation_stage_2_respawn_real_1 import Respawn
+from simulation_respawn_real import Respawn
 # from nodes.turtlebot3_real_transmission_2 import Sender
 # from gazebo_msgs.msg import ModelStates, ModelState
 
