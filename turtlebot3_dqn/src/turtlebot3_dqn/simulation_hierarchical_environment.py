@@ -73,7 +73,7 @@ class Env():
             heading += 2 * pi
 
         self.heading = round(heading, 2)
-
+	# dqn 1
     def getState(self, scan):
         scan_range = []
         heading = self.heading
@@ -94,12 +94,12 @@ class Env():
             print("crashes:", self.crashes, "goals reached:", self.goals)
 
         return scan_range + [heading, current_distance], self.goals
-
+	#dqn 2
     def getState_2(self, scan):
         scan_range = []
         min_range = 0.13
         done = False
-
+	# filtering for short range planner
         for i in range(len(scan.ranges)):
             if scan.ranges[i] == float('Inf'):
                 scan_range.append(1.5)
@@ -150,7 +150,8 @@ class Env():
             ob_reward = 5
         else:
             ob_reward = 1 + (math.fabs(obstacle_min_range)-0.5)*20
-
+	
+	#punishing deviation from angle
 	if action == action_2:
 	    reward_action = 3
 	else:
