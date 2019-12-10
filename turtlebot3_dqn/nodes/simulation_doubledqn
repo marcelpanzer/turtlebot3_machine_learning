@@ -82,7 +82,8 @@ class ReinforceAgent():
         model.summary()
 
         return model
-
+    
+    # doubledqn
     def getQvalue(self, reward, next_target, next_q_value_1, done):
          if done:
              return reward
@@ -121,9 +122,7 @@ class ReinforceAgent():
             self.q_value = q_value
 
 
-            # next_q_value_1 = self.model.predict(next_states.reshape(1, len(next_states)))
-            # next_target = self.target_model.predict(next_states.reshape(1, len(next_states)))
-
+            # double
             if target:
                 next_q_value_1 = self.model.predict(next_states.reshape(1, len(next_states)))
                 next_target = self.target_model.predict(next_states.reshape(1, len(next_states)))
@@ -169,6 +168,7 @@ if __name__ == '__main__':
     count_2 = 1
     sum = 0
     start_time = time.time()
+    # data collection
     with open('/home/ifl/catkin_ws/src/turtlebot3_machine_learning/turtlebot3_dqn/results_experiments/doubledqn_update_2_stage_dynamic_1_bis_.txt', 'w+') as saveFile:
         saveFile.write("Q-value,Crashes,Goals,Time" + '\n')
         for e in range(agent.load_episode + 1, EPISODES):
