@@ -86,7 +86,7 @@ class Critic(nn.Module):
         vs = self.fca2(x)
         return vs
 
-
+# second critic
 class Critic_2(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic_2, self).__init__()
@@ -203,7 +203,7 @@ class Trainer:
         self.target_critic = Critic(self.state_dim, self.action_dim)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), LEARNING_RATE)
 
-        # second critic
+        # second critic ma
         self.critic_2 = Critic_2(self.state_dim, self.action_dim)
         self.target_critic_2 = Critic_2(self.state_dim, self.action_dim)
         self.critic_optimizer_2 = torch.optim.Adam(self.critic_2.parameters(), LEARNING_RATE)
@@ -226,6 +226,7 @@ class Trainer:
         return action.data.numpy()
 
     def get_exploration_action(self, state):
+        # exploration noise ma
         state = torch.from_numpy(state)
         action = self.actor.forward(state).detach()
         noise = torch.zeros(2)
@@ -244,7 +245,7 @@ class Trainer:
 
     def optimizer(self):
 
-        # policy update frequently
+        # policy update frequently MA
         self.delay += 1
 
         s_sample, a_sample, r_sample, new_s_sample = ram.sample(BATCH_SIZE)
@@ -283,7 +284,8 @@ class Trainer:
 
         self.critic_optimizer.step()
         self.critic_optimizer_2.step()
-
+        
+        # delayed updates Ma
         if self.delay % self.frequency == 0:
             #------------ optimize actor
             pred_a_sample = self.actor.forward(s_sample)
