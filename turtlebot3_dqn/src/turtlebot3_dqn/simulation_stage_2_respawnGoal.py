@@ -127,6 +127,7 @@ class Respawn():
             #             self.goal_number += 1
             position_check = True
             while position_check:
+                # stage 2
 
                 goal_x = random.randrange(-10, 10) / 10.0 * self.factor
                 goal_y = random.randrange(-10, 10) / 10.0 * self.factor
