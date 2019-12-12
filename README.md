@@ -13,4 +13,4 @@ In the simulation_environment_stage_1 file (src/turtlebot3_dqn) substitute the n
 
 from simulation_stage_2_respawnGoal import Respawn
 
-with the desired simulated stage number (1-6)
+with the desired simulated stage number (1-6, set target number to zero when training starts from scratch)
