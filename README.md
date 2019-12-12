@@ -3,7 +3,9 @@
 
 ## Run the code:
 roslaunch turtlebot3_dqn simulation_...... .launch
+
 depending on the RL method in the launch files
+
 
 Adaptation of the respawn algorithm to the respective simulated world:
 
